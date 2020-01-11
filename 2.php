@@ -16,3 +16,23 @@ function convertString($a, $b) {
 	// echo $rev;
 }
 // convertString($a, $b);
+
+// Функция mySortForKey($a, $b)
+// $a = [['a'=>[4, 5, 8, 1, 3],'b'=>1,'4'=>52],['a'=>[20, 15, 18, 11, 13],'b'=>3]];
+// $b = 'a';
+function mySortForKey($a, $b) {
+	foreach ($a as $key => $value) {
+		foreach ($a[$key] as $k => $v) {
+			if (array_key_exists($b, $a[$key])) {
+				if (is_array($a[$key][$b]) && $k == $b) {
+					sort($a[$key][$k]);
+				}
+			} else {
+				throw new Exception("Индекс неправильного массива - $key");
+			}
+		}
+	}
+	// debug($a);
+	return $a;
+}
+// mySortForKey($a, $b);
