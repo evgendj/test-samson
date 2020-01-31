@@ -92,8 +92,10 @@ function importXml($a) {
 // Функция exportXml($a, $b)
 function exportXml($a, $b) {
 	require_once('connect_db.php');
-	$xml = '<?xml version="1.0" encoding="UTF-8"?><Товары></Товары>';
-	$products = new SimpleXMLElement($xml);
+	$dom = new domDocument("1.0", "utf-8");
+	$dom->formatOutput=true;
+	$root = $dom->createElement('Товары');
+	$dom->appendChild($root);
 
 	try {
 		// Выбираем категорию с требуемым кодом.
@@ -105,33 +107,40 @@ function exportXml($a, $b) {
 		while ($product_category = $product_cat_q->fetch(PDO::FETCH_ASSOC)) {
 			$product_q = $pdo->query("SELECT * FROM a_product WHERE product_id = $product_category[product_id]");
 			$product = $product_q->fetch(PDO::FETCH_ASSOC);
-			$product_tag = $products->addChild('Товар');
-			$product_tag->addAttribute('Код', $product['code']);
-			$product_tag->addAttribute('Название', $product['name']);
+			$product_tag = $dom->createElement('Товар');
+			$product_tag->setAttribute('Код', $product['code']);
+			$product_tag->setAttribute('Название', $product['name']);
 
 			// Выбираем цены, формируем тип цены и значение.
 			$price_q = $pdo->query("SELECT * FROM a_price WHERE product_id = $product[product_id]");
 			while ($price = $price_q->fetch(PDO::FETCH_ASSOC)) {
-				$price_tag = $product_tag->addChild('Цена', $price['price']);
-				$price_tag->addAttribute('Тип', $price['type']);
+				$price_tag = $dom->createElement('Цена', $price['price']);
+				$price_tag->setAttribute('Тип', $price['type']);
+				$product_tag->appendChild($price_tag);
 			}
 
 			// Выбираем и формируем свойства
-			$properties_tag = $product_tag->addChild('Свойства');
+			$properties_tag = $dom->createElement('Свойства');
 			$property_q = $pdo->query("SELECT * FROM a_property WHERE product_id = $product[product_id]");
 			while ($property = $property_q->fetch(PDO::FETCH_ASSOC)) {
-				$properties_tag->addChild($property['name'], $property['property']);
+				$property_tag = $dom->createElement($property['name'], $property['property']);
+				$properties_tag->appendChild($property_tag);
+				$product_tag->appendChild($properties_tag);
 			}
 
 			// Формируем категории
-			$catalogs_tag = $product_tag->addChild('Разделы');
-			$catalogs_tag->addChild('Раздел', $category['name']);
+			$catalogs_tag = $dom->createElement('Разделы');
+			$catalog_tag = $dom->createElement('Раздел', $category['name']);
+			$catalogs_tag->appendChild($catalog_tag);
+			$product_tag->appendChild($catalogs_tag);
+
+			$root->appendChild($product_tag);
 		}
 	} catch (PDOException $e) {
 		echo "Ошибка выполнения запроса " . $e->getMessage();
 	}
-	$products->asXML($a);
+	$dom->save($a);
 }
-// $a = 'a.xml';
-// $b = 2;
-// exportXml($a, $b);
+$a = 'a.xml';
+$b = 1;
+exportXml($a, $b);
