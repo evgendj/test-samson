@@ -45,42 +45,52 @@ function importXml($a) {
 	try {
 		for ($i = 0, $parent_id = 0, $c = 1; $i < $product->Товар->count(); $i++) {
 
-			// Загружаем код и имя продукта, извлекаем id
-			$insert_product = $pdo->prepare("INSERT INTO a_product VALUES (NULL, ?, ?)");
-			$insert_product->execute([$product->Товар[$i]->attributes()->{'Код'}, $product->Товар[$i]->attributes()->{'Название'}]);
-			$product_id = $pdo->lastInsertId();
-
-			// Загружаем цену с типом
-			$insert_price = $pdo->prepare("INSERT INTO a_price VALUES ($product_id, ?, ?)");
-			foreach ($product->Товар[$i]->Цена as $price) {
-				$insert_price->execute([$price['Тип'], $price]);
-			}
-
-			// Загружаем свойства
-			$insert_properties = $pdo->prepare("INSERT INTO a_property VALUES ($product_id, ?, ?)");
-			foreach ($product->Товар[$i]->Свойства as $properties) {
-				foreach ($properties as $property => $value) {
-					$insert_properties->execute([$property, $value]);
-				}
-			}
-
-			// Загружаем разделы, вложенность разделов и связь разделов с товаром
-			$insert_category = $pdo->prepare("INSERT INTO a_category VALUES (NULL, ?, ?, ?)");
-			$product_in_category = $pdo->prepare("INSERT INTO a_product_category VALUES (?, ?)");
-			foreach ($product->Товар[$i]->Разделы->Раздел as $category_name) {
-				$query_category = $pdo->query("SELECT * FROM a_category WHERE name LIKE '$category_name'");
-				$category = $query_category->fetch(PDO::FETCH_ASSOC);
-				if ($category['name'] == $category_name) {
-					$parent_id = $category['category_id'];
-					$product_in_category->execute([$product_id, $category['category_id']]);
+			// Загружаем код (ПРИ НАЛИЧИИ) и продукт (ЕСЛИ НЕ ДУБЛЬ), извлекаем id
+			$name_product = $product->Товар[$i]->attributes()->{'Название'};
+			$check_product = $pdo->query("SELECT * FROM a_product WHERE name LIKE '$name_product'");
+			if(!$check_product->fetch()) {
+				$insert_product = $pdo->prepare("INSERT INTO a_product VALUES (NULL, ?, ?)");
+				if ($product->Товар[$i]->attributes()->{'Код'}) {
+					$insert_product->execute([$product->Товар[$i]->attributes()->{'Код'}, $product->Товар[$i]->attributes()->{'Название'}]);
 				} else {
-					$insert_category->execute([$c, $category_name, $parent_id]);
-					$parent_id = $pdo->lastInsertId();
-					$product_in_category->execute([$product_id, $pdo->lastInsertId()]);
-					$c++;
+					$insert_product->execute([NULL, $product->Товар[$i]->attributes()->{'Название'}]);
 				}
-			}
-			$parent_id = 0;
+				$product_id = $pdo->lastInsertId();
+
+				// Загружаем цену с типом
+				$insert_price = $pdo->prepare("INSERT INTO a_price VALUES ($product_id, ?, ?)");
+				foreach ($product->Товар[$i]->Цена as $price) {
+					$insert_price->execute([$price['Тип'], $price]);
+				}
+
+				// Загружаем свойства (ПРИ НАЛИЧИИ)
+				$insert_properties = $pdo->prepare("INSERT INTO a_property VALUES ($product_id, ?, ?)");
+				foreach ($product->Товар[$i]->Свойства as $properties) {
+					foreach ($properties as $property => $value) {
+						if ($product->Товар[$i]->Свойства) {
+							$insert_properties->execute([$property, $value]);
+						}
+					}
+				}
+
+				// Загружаем разделы, вложенность разделов и связь разделов с товаром
+				$insert_category = $pdo->prepare("INSERT INTO a_category VALUES (NULL, ?, ?, ?)");
+				$product_in_category = $pdo->prepare("INSERT INTO a_product_category VALUES (?, ?)");
+				foreach ($product->Товар[$i]->Разделы->Раздел as $category_name) {
+					$query_category = $pdo->query("SELECT * FROM a_category WHERE name LIKE '$category_name'");
+					$category = $query_category->fetch(PDO::FETCH_ASSOC);
+					if ($category['name'] == $category_name) {
+						$parent_id = $category['category_id'];
+						$product_in_category->execute([$product_id, $category['category_id']]);
+					} else {
+						$insert_category->execute([$c, $category_name, $parent_id]);
+						$parent_id = $pdo->lastInsertId();
+						$product_in_category->execute([$product_id, $pdo->lastInsertId()]);
+						$c++;
+					}
+				}
+				$parent_id = 0;
+			} else "В файле $a обнаружены дубли товаров. Загружен только уникальный товар.";
 		}
 	} catch (PDOException $e) {
 		echo "Ошибка загрузки в базу данных" . $e->getMessage();
@@ -141,6 +151,6 @@ function exportXml($a, $b) {
 	}
 	$dom->save($a);
 }
-$a = 'a.xml';
-$b = 1;
-exportXml($a, $b);
+// $a = 'a.xml';
+// $b = 1;
+// exportXml($a, $b);
