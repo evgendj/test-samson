@@ -9,6 +9,7 @@ class newBase
      * @param string $name
      */
     function __construct(int $name = 0)
+    // function __construct($name = 0)
     {
         if (empty($name)) {
             while (array_search(self::$count, self::$arSetName) != false) {
@@ -20,6 +21,7 @@ class newBase
         self::$arSetName[] = $this->name;
     }
     private $name;
+    // protected $name;
     /**
      * @return string
      */
@@ -92,6 +94,7 @@ class newView extends newBase
     private function setSize()
     {
         if (is_subclass_of($this->value, "Test3\newView")) {
+        // if (is_subclass_of($this->value, 'Test3\newView')) {
             $this->size = parent::getSize() + 1 + strlen($this->property);
         } elseif ($this->type == 'test') {
             $this->size = parent::getSize();
@@ -113,6 +116,7 @@ class newView extends newBase
     {
         if (empty($this->name)) {
             throw new Exception('The object doesn\'t have name');
+            // throw new \Exception('The object doesn\'t have name');
         }
         return '"' . $this->name  . '": ';
     }
@@ -171,11 +175,13 @@ function gettype($value): string
         $type = get_class($value);
         do {
             if (strpos($type, "Test3\newBase") !== false) {
+            // if (strpos($type, 'Test3\newBase') !== false) {
                 return 'test';
             }
         } while ($type = get_parent_class($type));
     }
     return gettype($value);
+    // return \gettype($value);
 }
 
 
@@ -192,4 +198,3 @@ $save = $obj2->getSave();
 $obj3 = newView::load($save);
 
 var_dump($obj2->getSave() == $obj3->getSave());
-
